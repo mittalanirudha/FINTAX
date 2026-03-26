@@ -1,0 +1,33 @@
+{
+  "name": "FinTax Partner Tool",
+  "short_name": "FinTax",
+  "description": "Franchise Partner Service Selector & Quote Generator",
+  "start_url": "./franchise-tool.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8F9FA",
+  "theme_color": "#185FA5",
+  "lang": "hi",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Services Dekhen",
+      "url": "./franchise-tool.html",
+      "description": "Saari services browse karein"
+    }
+  ],
+  "categories": ["finance", "business", "productivity"]
+}

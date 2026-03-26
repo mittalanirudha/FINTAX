@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body>
+<canvas id="c192" width="192" height="192" style="display:none"></canvas>
+<canvas id="c512" width="512" height="512" style="display:none"></canvas>
+<p id="status">Generating icons...</p>
+<script>
+function makeIcon(canvas, size, firmName) {
+  const ctx = canvas.getContext('2d');
+  const initials = firmName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() || 'TF';
+  
+  // Background rounded rect
+  ctx.fillStyle = '#185FA5';
+  const r = size * 0.18;
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(size-r, 0);
+  ctx.arcTo(size, 0, size, r, r);
+  ctx.lineTo(size, size-r);
+  ctx.arcTo(size, size, size-r, size, r);
+  ctx.lineTo(r, size);
+  ctx.arcTo(0, size, 0, size-r, r);
+  ctx.lineTo(0, r);
+  ctx.arcTo(0, 0, r, 0, r);
+  ctx.closePath();
+  ctx.fill();
+  
+  // Text
+  ctx.fillStyle = 'white';
+  ctx.font = `bold ${Math.floor(size*0.38)}px Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(initials, size/2, size/2);
+  
+  return canvas.toDataURL('image/png');
+}
+
+const firmName = localStorage.getItem('firmName') || 'FinTax';
+const d192 = makeIcon(document.getElementById('c192'), 192, firmName);
+const d512 = makeIcon(document.getElementById('c512'), 512, firmName);
+
+// Download both
+[{data:d192,name:'icon-192.png'},{data:d512,name:'icon-512.png'}].forEach(({data,name}) => {
+  const a = document.createElement('a');
+  a.href = data;
+  a.download = name;
+  a.click();
+});
+document.getElementById('status').textContent = 'Icons downloaded! Upload them to your server.';
+</script>
+</body>
+</html>

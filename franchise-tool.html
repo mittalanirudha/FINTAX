@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FinTax">
+<meta name="theme-color" content="#185FA5">
+<meta name="description" content="Franchise Partner Service Tool">
+<title>FinTax Partner Tool</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --blue:#185FA5;--blue-lt:#E6F1FB;--blue-dk:#0C447C;
+  --green:#1D9E75;--green-lt:#E1F5EE;
+  --amber:#EF9F27;--amber-lt:#FAEEDA;--amber-dk:#633806;
+  --red:#E24B4A;--red-lt:#FCEBEB;
+  --g50:#F8F9FA;--g100:#F1F3F5;--g200:#E9ECEF;--g400:#ADB5BD;--g600:#6C757D;--g800:#343A40;
+  --white:#fff;
+  --sh-sm:0 1px 4px rgba(0,0,0,.08);--sh-md:0 4px 16px rgba(0,0,0,.12);
+  --r-sm:8px;--r-md:12px;--r-lg:18px;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --nav-h:60px;--bot-h:64px;
+  --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;font-family:var(--font);background:var(--g50);color:var(--g800);font-size:14px;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+
+/* LOGIN */
+#loginScreen{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(150deg,#0C447C 0%,#185FA5 50%,#1a7fc4 100%);padding:24px;padding-top:calc(24px + var(--sat))}
+.lcard{background:white;border-radius:var(--r-lg);box-shadow:var(--sh-md);padding:32px 28px 28px;width:100%;max-width:380px;text-align:center}
+.lapp-icon{width:72px;height:72px;border-radius:20px;background:var(--blue);color:white;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 6px 20px rgba(24,95,165,.35)}
+.lfirm{font-size:20px;font-weight:700;color:var(--g800);margin-bottom:4px}
+.lsub{font-size:13px;color:var(--g600);margin-bottom:26px;line-height:1.5}
+.linput-w{position:relative;margin-bottom:13px}
+.linput-w svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--g400);fill:none;stroke-width:2}
+.lcard input{width:100%;padding:13px 14px 13px 44px;border:1.5px solid var(--g200);border-radius:var(--r-sm);font-size:15px;outline:none;background:var(--g50);color:var(--g800);transition:border .2s,background .2s}
+.lcard input:focus{border-color:var(--blue);background:white}
+.lbtn{width:100%;padding:14px;background:var(--blue);color:white;border:none;border-radius:var(--r-sm);font-size:15px;font-weight:700;cursor:pointer;transition:background .15s,transform .1s}
+.lbtn:active{transform:scale(.98);background:var(--blue-dk)}
+.lerr{color:var(--red);font-size:13px;margin-top:10px;display:none}
+.install-bar{display:none;background:white;border-radius:var(--r-md);padding:13px 16px;margin-top:14px;width:100%;max-width:380px;align-items:center;gap:12px;box-shadow:var(--sh-sm)}
+.install-bar.show{display:flex}
+.ib-text{flex:1;font-size:12px;color:var(--g800);line-height:1.4}
+.ib-text b{font-weight:700;display:block;margin-bottom:2px}
+.ib-btn{padding:7px 14px;background:var(--blue);color:white;border:none;border-radius:var(--r-sm);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
+
+/* APP SHELL */
+#mainApp{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto}
+@media(min-width:768px){#mainApp{max-width:640px;box-shadow:0 0 40px rgba(0,0,0,.1)}}
+
+/* TOP NAV */
+.topnav{height:calc(var(--nav-h) + var(--sat));padding-top:var(--sat);background:var(--blue);display:flex;align-items:center;padding:var(--sat) 16px 0;flex-shrink:0;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.topnav-inner{display:flex;align-items:center;width:100%;height:var(--nav-h)}
+.nav-icon-box{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.2);color:white;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:10px}
+.nav-firm-name{font-size:15px;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.nav-role{font-size:10px;color:rgba(255,255,255,.7)}
+.nav-action-btn{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.15);border:none;color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:8px;flex-shrink:0}
+.nav-action-btn:active{background:rgba(255,255,255,.3)}
+
+/* APP BODY */
+.app-body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--bot-h) + var(--sab) + 12px)}
+
+/* BOTTOM NAV */
+.botnav{height:calc(var(--bot-h) + var(--sab));padding-bottom:var(--sab);background:white;border-top:1px solid var(--g200);display:flex;align-items:stretch;flex-shrink:0;position:sticky;bottom:0;z-index:100}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:none;cursor:pointer;padding:6px 4px;transition:all .15s}
+.bnav-icon{font-size:22px;line-height:1;transition:transform .15s}
+.bnav-lbl{font-size:10px;font-weight:600;color:var(--g400);letter-spacing:.3px}
+.bnav-btn.active .bnav-lbl{color:var(--blue)}
+.bnav-btn.active .bnav-icon{transform:scale(1.08)}
+
+/* SCREENS */
+.screen{display:none;padding:16px}
+.screen.active{display:block}
+
+/* HOME */
+.greet-card{background:var(--blue);border-radius:var(--r-lg);padding:20px;margin-bottom:18px;position:relative;overflow:hidden}
+.greet-card::before{content:'';position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.07)}
+.greet-card::after{content:'';position:absolute;right:40px;bottom:-40px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.05)}
+.gc-hello{font-size:12px;color:rgba(255,255,255,.7);margin-bottom:2px}
+.gc-firm{font-size:18px;font-weight:700;color:white;margin-bottom:14px}
+.gc-stats{display:flex;gap:20px}
+.gc-stat .val{font-size:22px;font-weight:800;color:white}
+.gc-stat .lbl{font-size:10px;color:rgba(255,255,255,.65);margin-top:1px}
+
+.sec-hd{font-size:12px;font-weight:700;color:var(--g600);text-transform:uppercase;letter-spacing:.07em;margin:18px 0 10px}
+
+.qcat-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.qcat-scroll::-webkit-scrollbar{display:none}
+.qcat-pill{flex-shrink:0;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity .15s}
+.qcat-pill:active{opacity:.7}
+.qcp-blue{background:var(--blue-lt);color:var(--blue-dk)}
+.qcp-green{background:var(--green-lt);color:#0a5c3d}
+.qcp-amber{background:var(--amber-lt);color:var(--amber-dk)}
+.qcp-purple{background:#EEEDFE;color:#3C3489}
+.qcp-pink{background:#FBEAF0;color:#993556}
+.qcp-gray{background:var(--g100);color:var(--g800)}
+
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.feat-card{background:white;border-radius:var(--r-md);padding:14px;box-shadow:var(--sh-sm);cursor:pointer;border:1.5px solid transparent;transition:all .15s}
+.feat-card:active{transform:scale(.96);border-color:var(--blue)}
+.feat-icon{font-size:24px;margin-bottom:8px}
+.feat-name{font-size:12px;font-weight:600;color:var(--g800);line-height:1.4}
+.feat-price{font-size:12px;color:var(--blue);font-weight:700;margin-top:6px}
+
+/* SERVICES */
+.sticky-search{position:sticky;top:0;z-index:10;background:var(--g50);padding:12px 0 8px;margin:-16px -16px 12px;padding:12px 16px 8px}
+.search-w{position:relative}
+.search-w svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--g400);fill:none;stroke-width:2}
+.search-inp{width:100%;padding:11px 14px 11px 40px;border:1.5px solid var(--g200);border-radius:var(--r-sm);font-size:14px;outline:none;background:white;color:var(--g800);box-shadow:var(--sh-sm)}
+.search-inp:focus{border-color:var(--blue)}
+
+.cat-row{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none;margin-bottom:14px}
+.cat-row::-webkit-scrollbar{display:none}
+.cat-chip{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid var(--g200);background:white;color:var(--g600);cursor:pointer;transition:all .15s}
+.cat-chip.active{background:var(--blue);color:white;border-color:var(--blue)}
+
+.svc-list{display:flex;flex-direction:column;gap:9px}
+.svc-item{background:white;border-radius:var(--r-md);padding:14px 15px;display:flex;align-items:center;gap:12px;box-shadow:var(--sh-sm);cursor:pointer;border:1.5px solid transparent;transition:all .15s}
+.svc-item:active{transform:scale(.985);border-color:var(--blue)}
+.svc-item-icon{width:44px;height:44px;border-radius:12px;background:var(--blue-lt);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.svc-item-info{flex:1;min-width:0}
+.svc-item-name{font-size:14px;font-weight:600;color:var(--g800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.svc-item-cat{font-size:11px;color:var(--g600);margin-top:2px}
+.svc-item-r{flex-shrink:0;text-align:right}
+.svc-price{font-size:13px;font-weight:700;color:var(--blue)}
+.svc-earn{font-size:10px;color:var(--green);font-weight:600;margin-top:2px}
+.svc-chevron{color:var(--g400);font-size:18px;margin-left:2px}
+
+.empty-state{text-align:center;padding:48px 20px;color:var(--g600)}
+.es-icon{font-size:40px;margin-bottom:12px}
+.es-text{font-size:14px;line-height:1.6}
+
+.sk-item{height:72px;border-radius:var(--r-md);margin-bottom:9px;background:linear-gradient(90deg,var(--g100) 25%,var(--g200) 50%,var(--g100) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* DETAIL SLIDE */
+.detail-slide{position:fixed;inset:0;background:var(--g50);z-index:200;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);max-width:480px;margin:0 auto}
+@media(min-width:768px){.detail-slide{max-width:640px;left:50%;right:auto;transform:translateX(calc(-50% + 320px));width:640px}}
+.detail-slide.open{transform:translateX(0)}
+@media(min-width:768px){.detail-slide.open{transform:translateX(-50%)}}
+.dtopbar{height:calc(var(--nav-h) + var(--sat));padding-top:var(--sat);background:white;display:flex;align-items:flex-end;padding-bottom:0;border-bottom:1px solid var(--g200);flex-shrink:0}
+.dtopbar-inner{display:flex;align-items:center;width:100%;padding:0 14px 0 4px;height:var(--nav-h)}
+.btn-back{width:44px;height:44px;border:none;background:none;font-size:26px;cursor:pointer;color:var(--blue);display:flex;align-items:center;justify-content:center;border-radius:10px;flex-shrink:0}
+.btn-back:active{background:var(--g100)}
+.dt-info{flex:1;min-width:0}
+.dt-title{font-size:15px;font-weight:700;color:var(--g800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dt-cat{font-size:11px;color:var(--g600);margin-top:1px}
+
+.detail-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;padding-bottom:96px}
+
+.view-seg{display:flex;background:var(--g100);border-radius:var(--r-sm);padding:3px;margin-bottom:16px}
+.vseg-btn{flex:1;padding:9px;border:none;border-radius:7px;font-size:12px;font-weight:700;background:transparent;color:var(--g600);cursor:pointer;transition:all .15s}
+.vseg-btn.active{background:white;color:var(--blue);box-shadow:var(--sh-sm)}
+
+.icard{background:white;border-radius:var(--r-md);padding:16px;margin-bottom:12px;box-shadow:var(--sh-sm)}
+.icard-title{font-size:11px;font-weight:700;color:var(--g600);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.icard-title .ico{font-size:15px}
+
+.doc-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--g100)}
+.doc-row:last-child{border-bottom:none}
+.doc-num{width:22px;height:22px;border-radius:50%;background:var(--blue-lt);color:var(--blue-dk);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.doc-txt{font-size:13px;color:var(--g800);line-height:1.5}
+
+.p-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--g100)}
+.p-row:last-child{border-bottom:none}
+.p-lbl{font-size:13px;color:var(--g600)}
+.p-val{font-size:14px;font-weight:700;color:var(--g800)}
+.p-val.blue{color:var(--blue);font-size:16px}
+.p-val.green{color:var(--green)}
+.p-val.red{color:var(--red)}
+
+.tl-chip{display:inline-flex;align-items:center;gap:6px;background:var(--green-lt);color:#0a5c3d;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;margin:8px 0 12px}
+
+.note-card{background:var(--amber-lt);border-left:3px solid var(--amber);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:12px 14px;font-size:12px;color:var(--amber-dk);line-height:1.6;margin-bottom:12px}
+
+.calc-card{background:var(--g50);border:1.5px dashed var(--g200);border-radius:var(--r-md);padding:16px;margin-bottom:12px}
+.calc-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.calc-row:last-child{margin-bottom:0}
+.calc-lbl{font-size:13px;color:var(--g600);flex:1}
+.calc-inp{width:120px;padding:9px 12px;border:1.5px solid var(--g200);border-radius:var(--r-sm);font-size:15px;font-weight:700;outline:none;text-align:right;background:white;color:var(--g800)}
+.calc-inp:focus{border-color:var(--blue)}
+.calc-res{font-size:16px;font-weight:800}
+
+.cform-card{background:white;border-radius:var(--r-md);padding:16px;margin-bottom:12px;box-shadow:var(--sh-sm)}
+.cform-title{font-size:12px;font-weight:700;color:var(--g600);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.cf-inp{width:100%;padding:11px 14px;border:1.5px solid var(--g200);border-radius:var(--r-sm);font-size:14px;outline:none;margin-bottom:9px;background:var(--g50);color:var(--g800)}
+.cf-inp:focus{border-color:var(--blue);background:white}
+.cf-inp:last-child{margin-bottom:0}
+
+.detail-actions{position:sticky;bottom:0;background:white;border-top:1px solid var(--g200);padding:12px 16px;padding-bottom:calc(12px + var(--sab));display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;flex-shrink:0}
+.da-btn{padding:12px 6px;border:none;border-radius:var(--r-sm);font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.3}
+.da-btn:active{transform:scale(.94)}
+.da-ico{font-size:19px}
+.da-wa{background:#E8F8F0;color:#0a5c3d}
+.da-em{background:var(--blue-lt);color:var(--blue-dk)}
+.da-pdf{background:var(--g100);color:var(--g800)}
+
+/* QUOTES */
+.empty-quote{text-align:center;padding:60px 24px;color:var(--g600)}
+.eq-icon{font-size:48px;margin-bottom:14px}
+.eq-text{font-size:14px;line-height:1.7}
+.btn-goto{margin-top:18px;padding:12px 24px;background:var(--blue);color:white;border:none;border-radius:var(--r-sm);font-size:14px;font-weight:700;cursor:pointer}
+
+.q-card{background:white;border-radius:var(--r-md);padding:14px 16px;box-shadow:var(--sh-sm);margin-bottom:10px}
+.qc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.qc-name{font-size:14px;font-weight:700;color:var(--g800)}
+.qc-date{font-size:11px;color:var(--g400)}
+.qc-svc{font-size:13px;color:var(--g600);margin-bottom:6px}
+.qc-price{font-size:16px;font-weight:800;color:var(--blue)}
+.q-actions{display:flex;gap:7px;margin-top:10px}
+.qa-btn{flex:1;padding:8px;font-size:12px;font-weight:700;border:none;border-radius:var(--r-sm);cursor:pointer}
+.qa-wa{background:#E8F8F0;color:#0a5c3d}
+.qa-pdf{background:var(--g100);color:var(--g800)}
+.qa-del{background:var(--red-lt);color:var(--red)}
+
+/* SHEET MODAL */
+.sheet-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:flex-end}
+.sheet-ov.open{display:flex}
+.sheet{background:white;border-radius:20px 20px 0 0;width:100%;max-height:85dvh;overflow-y:auto;padding:0 20px 24px;padding-bottom:calc(24px + var(--sab));transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.sheet-ov.open .sheet{transform:translateY(0)}
+.sheet-handle{width:36px;height:4px;background:var(--g200);border-radius:2px;margin:14px auto}
+.sheet-title{font-size:16px;font-weight:700;color:var(--g800);margin-bottom:8px}
+.sheet-body{font-size:13px;color:var(--g600);white-space:pre-wrap;line-height:1.7;max-height:240px;overflow-y:auto;margin-bottom:16px;background:var(--g50);border-radius:var(--r-sm);padding:12px}
+.sheet-btns{display:flex;flex-direction:column;gap:8px}
+.s-btn{width:100%;padding:14px;font-size:14px;font-weight:700;border:none;border-radius:var(--r-sm);cursor:pointer}
+.s-btn:active{opacity:.8}
+.s-btn.primary{background:var(--blue);color:white}
+.s-btn.success{background:#25D366;color:white}
+.s-btn.sec{background:var(--g100);color:var(--g800)}
+
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="lcard">
+    <div class="lapp-icon" id="loginIcon">TF</div>
+    <div class="lfirm" id="loginFirm">Loading...</div>
+    <div class="lsub">Franchise Partner Portal<br>Apna password enter karein</div>
+    <div class="linput-w">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      <input type="password" id="loginPass" placeholder="Partner password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="lbtn" onclick="doLogin()">Login karein →</button>
+    <div class="lerr" id="loginErr">❌ Galat password. Dobara try karein.</div>
+  </div>
+  <div class="install-bar" id="installBar">
+    <span style="font-size:24px;flex-shrink:0">📲</span>
+    <div class="ib-text"><b>App Install karein</b>Home screen pe add karein!</div>
+    <button class="ib-btn" onclick="promptInstall()">Install</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" class="hidden">
+  <div class="topnav">
+    <div class="topnav-inner">
+      <div class="nav-icon-box" id="navIcon">TF</div>
+      <div style="flex:1;min-width:0">
+        <div class="nav-firm-name" id="navFirm">FinTax Partner</div>
+        <div class="nav-role">Franchise Partner Portal</div>
+      </div>
+      <button class="nav-action-btn" onclick="doLogout()" title="Logout" style="font-size:15px">⎋ Logout</button>
+    </div>
+  </div>
+
+  <div class="app-body" id="appBody">
+    <!-- HOME -->
+    <div class="screen active" id="sc-home">
+      <div class="greet-card">
+        <div class="gc-hello">Namaste 👋</div>
+        <div class="gc-firm" id="greetFirm">FinTax Franchise</div>
+        <div class="gc-stats">
+          <div class="gc-stat"><div class="val" id="gSvc">—</div><div class="lbl">Services</div></div>
+          <div class="gc-stat"><div class="val" id="gCat">—</div><div class="lbl">Categories</div></div>
+          <div class="gc-stat"><div class="val" id="gMar">—</div><div class="lbl">Avg Margin</div></div>
+        </div>
+      </div>
+      <div class="sec-hd">Categories</div>
+      <div class="qcat-scroll" id="homeCats"></div>
+      <div class="sec-hd">Popular Services</div>
+      <div class="feat-grid" id="featGrid"></div>
+    </div>
+
+    <!-- SERVICES -->
+    <div class="screen" id="sc-services">
+      <div class="sticky-search">
+        <div class="search-w">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="search" class="search-inp" id="searchInp" placeholder="Search — GST, ITR, Trademark..." oninput="filterSvcs()"/>
+        </div>
+      </div>
+      <div class="cat-row" id="catRow"></div>
+      <div id="svcWrap">
+        <div class="sk-item"></div><div class="sk-item"></div><div class="sk-item"></div><div class="sk-item"></div>
+      </div>
+    </div>
+
+    <!-- QUOTES -->
+    <div class="screen" id="sc-quotes">
+      <div class="sec-hd">Saved Quotes</div>
+      <div id="quotesWrap"></div>
+    </div>
+  </div>
+
+  <nav class="botnav">
+    <button class="bnav-btn active" id="bn-home" onclick="showScreen('home')">
+      <span class="bnav-icon">🏠</span><span class="bnav-lbl">Home</span>
+    </button>
+    <button class="bnav-btn" id="bn-services" onclick="showScreen('services')">
+      <span class="bnav-icon">📋</span><span class="bnav-lbl">Services</span>
+    </button>
+    <button class="bnav-btn" id="bn-quotes" onclick="showScreen('quotes')">
+      <span class="bnav-icon">💬</span><span class="bnav-lbl">Quotes</span>
+    </button>
+  </nav>
+</div>
+
+<!-- DETAIL SLIDE -->
+<div class="detail-slide" id="detailSlide">
+  <div class="dtopbar">
+    <div class="dtopbar-inner">
+      <button class="btn-back" onclick="closeDetail()">‹</button>
+      <div class="dt-info">
+        <div class="dt-title" id="dtTitle">—</div>
+        <div class="dt-cat" id="dtCat">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-body">
+    <div class="view-seg">
+      <button class="vseg-btn active" id="vbP" onclick="setView('p')">🔒 Partner View</button>
+      <button class="vseg-btn" id="vbC" onclick="setView('c')">👤 Client View</button>
+    </div>
+
+    <div id="pvP">
+      <div class="icard">
+        <div class="icard-title"><span class="ico">📄</span> Documents Required</div>
+        <div id="pvDocs"></div>
+      </div>
+      <div class="tl-chip" id="pvTl">⏱ —</div>
+      <div class="icard">
+        <div class="icard-title"><span class="ico">💰</span> Pricing — Aapke liye</div>
+        <div id="pvPrice"></div>
+      </div>
+      <div class="calc-card">
+        <div class="icard-title" style="margin-bottom:12px"><span class="ico">🧮</span> Custom Calculator</div>
+        <div class="calc-row"><span class="calc-lbl">Aap charge karein:</span><input type="number" class="calc-inp" id="calcInp" oninput="calcProfit()" inputmode="numeric"/></div>
+        <div class="calc-row"><span class="calc-lbl">Earning hogi:</span><span class="calc-res" id="calcOut">—</span></div>
+      </div>
+      <div class="note-card" id="pvNote"></div>
+    </div>
+
+    <div id="pvC" class="hidden">
+      <div class="icard">
+        <div class="icard-title"><span class="ico">📄</span> Documents Required</div>
+        <div id="cvDocs"></div>
+      </div>
+      <div class="tl-chip" id="cvTl">⏱ —</div>
+      <div class="icard">
+        <div class="icard-title"><span class="ico">💰</span> Service Pricing</div>
+        <div id="cvPrice"></div>
+      </div>
+      <div class="icard" style="background:#f0fdf7">
+        <div class="icard-title" style="color:#0a5c3d"><span class="ico">✅</span> Hamari Guarantee</div>
+        <div style="font-size:13px;color:#0a5c3d;line-height:1.6">Professional & time-bound service. 100% government compliant filing.</div>
+      </div>
+    </div>
+
+    <div class="cform-card">
+      <div class="cform-title">📋 Client Details (Quote ke liye)</div>
+      <input type="text"   class="cf-inp" id="cName"   placeholder="Client ka naam"/>
+      <input type="tel"    class="cf-inp" id="cPhone"  placeholder="WhatsApp number" inputmode="tel"/>
+      <input type="email"  class="cf-inp" id="cEmail"  placeholder="Email (optional)" inputmode="email"/>
+      <input type="number" class="cf-inp" id="cCustom" placeholder="Custom price ₹ (optional)" inputmode="numeric"/>
+    </div>
+  </div>
+
+  <div class="detail-actions">
+    <button class="da-btn da-wa" onclick="doWA()"><span class="da-ico">💬</span>WhatsApp</button>
+    <button class="da-btn da-em" onclick="doEmail()"><span class="da-ico">✉️</span>Email</button>
+    <button class="da-btn da-pdf" onclick="doPDF()"><span class="da-ico">🖨️</span>PDF/Print</button>
+  </div>
+</div>
+
+<!-- SHEET -->
+<div class="sheet-ov" id="sheetOv" onclick="closeSheetOv(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="shTitle"></div>
+    <div class="sheet-body"  id="shBody"></div>
+    <div class="sheet-btns" id="shBtns"></div>
+  </div>
+</div>
+
+<script>
+const FIREBASE_CONFIG = {
+  apiKey:"AIzaSyBGJl3D5LjPp_TTuB7BMoi_sJYrUpM6bu0",
+  authDomain:"fintax-29b28.firebaseapp.com",
+  projectId:"fintax-29b28",
+  storageBucket:"fintax-29b28.firebasestorage.app",
+  messagingSenderId:"268378181920",
+  appId:"1:268378181920:web:7540bd4fe62e9b0aa30745",
+  measurementId:"G-KV0KTN0TPZ"
+};
+
+let db, settings={}, services=[];
+let activeCat="Sab", searchVal="", selSvc=null, curV="p";
+let savedQ = JSON.parse(localStorage.getItem("fintax_q")||"[]");
+let dip = null;
+
+async function init(){
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db=firebase.firestore();
+    await loadSettings();
+    applyBrand();
+  }catch(e){
+    document.getElementById("loginFirm").textContent="Connection error — WiFi check karein";
+  }
+}
+
+async function loadSettings(){
+  try{
+    const d=await db.collection("config").doc("settings").get();
+    settings=d.exists?d.data():{firmName:"FinTax",partnerPass:"partner123"};
+  }catch(e){settings={firmName:"FinTax",partnerPass:"partner123"};}
+}
+
+function applyBrand(){
+  const nm=settings.firmName||"FinTax";
+  const in2=nm.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  document.getElementById("loginFirm").textContent=nm;
+  document.getElementById("loginIcon").textContent=in2;
+  document.getElementById("navFirm").textContent=nm+" Partner";
+  document.getElementById("navIcon").textContent=in2;
+  document.getElementById("greetFirm").textContent=nm+" Franchise";
+  document.title=nm+" — Partner";
+}
+
+/* PWA */
+window.addEventListener("beforeinstallprompt",e=>{
+  e.preventDefault(); dip=e;
+  document.getElementById("installBar").classList.add("show");
+});
+function promptInstall(){
+  if(dip){dip.prompt();dip.userChoice.then(()=>{dip=null;document.getElementById("installBar").classList.remove("show")});}
+}
+if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+
+/* LOGIN */
+function doLogin(){
+  const pass=document.getElementById("loginPass").value.trim();
+  if(pass===(settings.partnerPass||"partner123")){
+    sessionStorage.setItem("tfa","1");
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("mainApp").classList.remove("hidden");
+    loadAll();
+  }else{
+    const el=document.getElementById("loginErr");
+    el.style.display="block";
+    document.getElementById("loginPass").style.borderColor="#E24B4A";
+    setTimeout(()=>{el.style.display="none";document.getElementById("loginPass").style.borderColor="";},3000);
+  }
+}
+function doLogout(){sessionStorage.removeItem("tfa");location.reload();}
+
+/* LOAD */
+async function loadAll(){
+  try{
+    const sn=await db.collection("services").orderBy("order").get();
+    services=sn.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){services=[];}
+  renderHome(); renderCatRow(); renderSvcList(); renderQuotes();
+}
+
+/* HOME */
+function renderHome(){
+  const cats=[...new Set(services.map(s=>s.cat).filter(Boolean))];
+  const avg=services.length?Math.round(services.reduce((a,s)=>a+(s.clientPrice&&s.ourPrice?((s.clientPrice-s.ourPrice)/s.clientPrice)*100:0),0)/services.length):0;
+  document.getElementById("gSvc").textContent=services.length;
+  document.getElementById("gCat").textContent=cats.length;
+  document.getElementById("gMar").textContent=avg+"%";
+  const colors=["qcp-blue","qcp-green","qcp-amber","qcp-purple","qcp-pink","qcp-gray"];
+  document.getElementById("homeCats").innerHTML=cats.map((c,i)=>`<button class="qcat-pill ${colors[i%colors.length]}" onclick="jumpCat('${c}')">${getCatIcon(c)} ${c}</button>`).join("");
+  document.getElementById("featGrid").innerHTML=services.slice(0,6).map(s=>`<div class="feat-card" onclick="openDetail('${s.id}')"><div class="feat-icon">${s.icon||"📋"}</div><div class="feat-name">${s.name}</div><div class="feat-price">₹${(s.clientPrice||0).toLocaleString("en-IN")}</div></div>`).join("");
+}
+
+function getCatIcon(c){const m={"Income Tax":"📊","GST":"🏷️","Trademark & IP":"™️","Company":"🏢","Society & Trust":"🏛️","Registrations":"🔖"};return m[c]||"📋";}
+
+function jumpCat(c){activeCat=c;showScreen("services");renderCatRow();renderSvcList();}
+
+/* SERVICES */
+function renderCatRow(){
+  const cats=["Sab",...new Set(services.map(s=>s.cat).filter(Boolean))];
+  document.getElementById("catRow").innerHTML=cats.map(c=>`<button class="cat-chip${c===activeCat?" active":""}" onclick="setCat('${c}')">${c}</button>`).join("");
+}
+function setCat(c){activeCat=c;renderCatRow();renderSvcList();}
+function filterSvcs(){searchVal=document.getElementById("searchInp").value;renderSvcList();}
+
+function renderSvcList(){
+  const sv=searchVal.toLowerCase();
+  const f=services.filter(s=>{
+    const cm=activeCat==="Sab"||s.cat===activeCat;
+    const sm=!sv||(s.name||"").toLowerCase().includes(sv)||(s.cat||"").toLowerCase().includes(sv);
+    return cm&&sm;
+  });
+  const w=document.getElementById("svcWrap");
+  if(!f.length){w.innerHTML='<div class="empty-state"><div class="es-icon">😕</div><div class="es-text">Koi service nahi mili.<br>Alag search try karein.</div></div>';return;}
+  w.innerHTML='<div class="svc-list">'+f.map(s=>{
+    const profit=(s.clientPrice||0)-(s.ourPrice||0);
+    const margin=s.clientPrice?Math.round((profit/s.clientPrice)*100):0;
+    return `<div class="svc-item" onclick="openDetail('${s.id}')"><div class="svc-item-icon">${s.icon||"📋"}</div><div class="svc-item-info"><div class="svc-item-name">${s.name}</div><div class="svc-item-cat">${s.cat}</div></div><div class="svc-item-r"><div class="svc-price">₹${(s.clientPrice||0).toLocaleString("en-IN")}</div><div class="svc-earn">+₹${profit.toLocaleString("en-IN")} (${margin}%)</div></div><span class="svc-chevron">›</span></div>`;
+  }).join("")+'</div>';
+}
+
+/* DETAIL */
+function openDetail(id){
+  const s=services.find(x=>x.id===id);if(!s)return;
+  selSvc=s;
+  document.getElementById("dtTitle").textContent=s.name;
+  document.getElementById("dtCat").textContent=s.cat;
+  document.getElementById("pvTl").textContent="⏱ "+(s.timeline||"—");
+  document.getElementById("cvTl").textContent="⏱ "+(s.timeline||"—");
+  document.getElementById("pvNote").textContent="⚠️ "+(s.note||"");
+  const dh=(s.docs||[]).map((d,i)=>`<div class="doc-row"><span class="doc-num">${i+1}</span><span class="doc-txt">${d}</span></div>`).join("");
+  document.getElementById("pvDocs").innerHTML=dh;
+  document.getElementById("cvDocs").innerHTML=dh;
+  const our=s.ourPrice||0,cl=s.clientPrice||0,pr=cl-our,mg=cl?Math.round((pr/cl)*100):0;
+  document.getElementById("pvPrice").innerHTML=`<div class="p-row"><span class="p-lbl">Hamara base price</span><span class="p-val">₹${our.toLocaleString("en-IN")}</span></div><div class="p-row"><span class="p-lbl">Suggested client charge</span><span class="p-val blue">₹${cl.toLocaleString("en-IN")}</span></div><div class="p-row"><span class="p-lbl">Aapki earning</span><span class="p-val green">₹${pr.toLocaleString("en-IN")} (${mg}%)</span></div>`;
+  document.getElementById("cvPrice").innerHTML=`<div class="p-row"><span class="p-lbl">Professional fees</span><span class="p-val blue">₹${cl.toLocaleString("en-IN")}</span></div><div class="p-row"><span class="p-lbl">Timeline</span><span class="p-val">${s.timeline||"—"}</span></div>`;
+  document.getElementById("calcInp").value=cl;
+  calcProfit();
+  setView("p");
+  ["cName","cPhone","cEmail","cCustom"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("detailSlide").classList.add("open");
+  document.body.style.overflow="hidden";
+}
+
+function closeDetail(){document.getElementById("detailSlide").classList.remove("open");document.body.style.overflow="";}
+function setView(v){
+  curV=v;
+  document.getElementById("pvP").classList.toggle("hidden",v!=="p");
+  document.getElementById("pvC").classList.toggle("hidden",v!=="c");
+  document.getElementById("vbP").classList.toggle("active",v==="p");
+  document.getElementById("vbC").classList.toggle("active",v==="c");
+}
+
+/* CALC */
+function calcProfit(){
+  if(!selSvc)return;
+  const ch=parseInt(document.getElementById("calcInp").value)||0;
+  const pr=ch-(selSvc.ourPrice||0);
+  const el=document.getElementById("calcOut");
+  if(!ch){el.textContent="—";el.style.color="#6C757D";return;}
+  if(pr<0){el.style.color="#E24B4A";el.textContent="₹"+Math.abs(pr).toLocaleString("en-IN")+" loss ⚠️";}
+  else{el.style.color="#1D9E75";el.textContent="₹"+pr.toLocaleString("en-IN")+" ("+Math.round((pr/ch)*100)+"%)";}
+}
+
+/* QUOTE */
+function getQ(){
+  if(!selSvc)return null;
+  return{s:selSvc,name:document.getElementById("cName").value.trim()||"Sir/Madam",phone:document.getElementById("cPhone").value.trim(),email:document.getElementById("cEmail").value.trim(),fp:parseInt(document.getElementById("cCustom").value)||selSvc.clientPrice||0};
+}
+function buildMsg(q){
+  const firm=settings.firmName||"FinTax";
+  const ph=settings.phone?"\nPhone: "+settings.phone:"";
+  const em=settings.email?"\nEmail: "+settings.email:"";
+  return `Namaste ${q.name},\n\n${q.s.name} ke liye quotation:\n\n✅ Service   : ${q.s.name}\n💰 Fees      : ₹${q.fp.toLocaleString("en-IN")}\n⏱ Timeline  : ${q.s.timeline||"—"}\n\n📄 Documents Needed:\n`+(q.s.docs||[]).map((d,i)=>`   ${i+1}. ${d}`).join("\n")+`\n\nKisi bhi sawal ke liye contact karein.\n\nDhanyawad 🙏\n${firm}${ph}${em}`;
+}
+function saveQ(q){
+  const e={id:Date.now(),svcName:q.s.name,clientName:q.name,phone:q.phone,price:q.fp,date:new Date().toLocaleDateString("en-IN"),docs:q.s.docs,note:q.s.note,timeline:q.s.timeline};
+  savedQ.unshift(e);if(savedQ.length>20)savedQ=savedQ.slice(0,20);
+  localStorage.setItem("fintax_q",JSON.stringify(savedQ));
+  renderQuotes();
+}
+
+function doWA(){
+  const q=getQ();if(!q)return;
+  const txt=buildMsg(q);
+  const num=q.phone.replace(/\D/g,"");
+  const url="https://wa.me/"+(num?"91"+num:"")+"?text="+encodeURIComponent(txt);
+  saveQ(q);
+  showSheet("💬 WhatsApp Quote",txt,[{lbl:"💬 WhatsApp pe Open karein",cls:"success",fn:()=>{window.open(url,"_blank");closeSheet();}},{lbl:"Band karein",cls:"sec",fn:closeSheet}]);
+}
+function doEmail(){
+  const q=getQ();if(!q)return;
+  const txt=buildMsg(q);
+  const href="mailto:"+(q.email||"")+"?subject="+encodeURIComponent(q.s.name+" — Service Quote")+"&body="+encodeURIComponent(txt);
+  saveQ(q);
+  showSheet("✉️ Email Quote",txt,[{lbl:"✉️ Email App Open karein",cls:"primary",fn:()=>{window.open(href);closeSheet();}},{lbl:"Band karein",cls:"sec",fn:closeSheet}]);
+}
+function doPDF(){
+  const q=getQ();if(!q)return;
+  const firm=settings.firmName||"FinTax",ph=settings.phone||"",em=settings.email||"";
+  const today=new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Quote</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;max-width:720px;margin:0 auto;padding:32px 24px;color:#111;font-size:14px;line-height:1.7}.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #185FA5;padding-bottom:16px;margin-bottom:20px}.firm{font-size:22px;font-weight:700;color:#185FA5}.ct{font-size:12px;color:#555;margin-top:4px}.db{text-align:right;font-size:12px;color:#555}.qn{font-size:16px;font-weight:700;color:#185FA5}h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#185FA5;margin:18px 0 8px}.row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eee;font-size:13px}.row .l{color:#555}.row .v{font-weight:700}.row.tot .l{font-weight:700;font-size:14px}.row.tot .v{font-size:17px;color:#185FA5}ul{margin:4px 0;padding-left:18px}li{margin:4px 0;font-size:13px}.note{background:#FFF8ED;border-left:3px solid #EF9F27;padding:10px 14px;font-size:12px;color:#633806;margin-top:14px;border-radius:0 6px 6px 0}.foot{margin-top:32px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:12px}@media print{body{padding:0 16px}}</style></head><body><div class="hdr"><div><div class="firm">${firm}</div><div class="ct">${ph?"📞 "+ph+"  ":""}${em?"✉️ "+em:""}</div></div><div class="db"><div class="qn">Service Quotation</div><div>Date: ${today}</div></div></div><h3>Client Details</h3><div class="row"><span class="l">Name</span><span class="v">${q.name}</span></div><div class="row"><span class="l">Phone</span><span class="v">${q.phone||"—"}</span></div><div class="row"><span class="l">Email</span><span class="v">${q.email||"—"}</span></div><h3>Service Details</h3><div class="row"><span class="l">Service</span><span class="v">${q.s.name}</span></div><div class="row"><span class="l">Category</span><span class="v">${q.s.cat}</span></div><div class="row"><span class="l">Timeline</span><span class="v">${q.s.timeline||"—"}</span></div><h3>Documents Required</h3><ul>${(q.s.docs||[]).map(d=>`<li>${d}</li>`).join("")}</ul><h3>Pricing</h3><div class="row"><span class="l">Professional Fees</span><span class="v">₹${q.fp.toLocaleString("en-IN")}</span></div><div class="row"><span class="l">GST (if applicable)</span><span class="v">As applicable</span></div><div class="row tot"><span class="l">Total Payable</span><span class="v">₹${q.fp.toLocaleString("en-IN")}+</span></div><div class="note">⚠️ ${q.s.note||"Kripya sabhi documents time par submit karein."}</div><div class="foot">Computer-generated quotation by ${firm}. Queries: ${ph||em||"our office"}.</div></body></html>`;
+  saveQ(q);
+  const url=URL.createObjectURL(new Blob([html],{type:"text/html"}));
+  showSheet("🖨️ PDF / Print Quote","Quote print karo ya PDF save karo.\n\nPrint: Ctrl+P (Windows) / Cmd+P (Mac)\nPDF: Printer dropdown → 'Save as PDF'\n\niPhone: Share → 'Print' → Pinch out = PDF",[{lbl:"🖨️ Quote open karein",cls:"primary",fn:()=>{window.open(url,"_blank");closeSheet();}},{lbl:"Band karein",cls:"sec",fn:closeSheet}]);
+}
+
+/* QUOTES SCREEN */
+function renderQuotes(){
+  const w=document.getElementById("quotesWrap");
+  if(!savedQ.length){w.innerHTML='<div class="empty-quote"><div class="eq-icon">📋</div><div class="eq-text">Abhi tak koi quote save nahi kiya.<br>Services mein jaao aur quote banao!</div><button class="btn-goto" onclick="showScreen(\'services\')">Services Dekhen →</button></div>';return;}
+  w.innerHTML=savedQ.map(q=>`<div class="q-card"><div class="qc-head"><div class="qc-name">${q.clientName}</div><div class="qc-date">${q.date}</div></div><div class="qc-svc">${q.svcName}</div><div class="qc-price">₹${(q.price||0).toLocaleString("en-IN")}</div><div class="q-actions"><button class="qa-btn qa-wa" onclick="resendWA(${q.id})">💬 WA</button><button class="qa-btn qa-pdf" onclick="reprintPDF(${q.id})">🖨️ PDF</button><button class="qa-btn qa-del" onclick="delQ(${q.id})">🗑</button></div></div>`).join("");
+}
+function resendWA(id){
+  const q=savedQ.find(x=>x.id===id);if(!q)return;
+  const txt=`Namaste ${q.clientName},\n\n${q.svcName} ki quotation:\n\n💰 Fees: ₹${(q.price||0).toLocaleString("en-IN")}\n⏱ Timeline: ${q.timeline||"—"}\n\n📄 Documents:\n`+(q.docs||[]).map((d,i)=>`  ${i+1}. ${d}`).join("\n")+`\n\nDhanyawad 🙏\n${settings.firmName||"FinTax"}`;
+  const num=(q.phone||"").replace(/\D/g,"");
+  window.open("https://wa.me/"+(num?"91"+num:"")+"?text="+encodeURIComponent(txt),"_blank");
+}
+function reprintPDF(id){
+  const q=savedQ.find(x=>x.id===id);if(!q)return;
+  const firm=settings.firmName||"FinTax";
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Quote</title><style>body{font-family:Arial;max-width:720px;margin:0 auto;padding:32px 24px;font-size:14px}h2{color:#185FA5;border-bottom:2px solid #185FA5;padding-bottom:10px;margin-bottom:16px}h3{font-size:12px;color:#185FA5;text-transform:uppercase;margin:14px 0 6px}.r{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee}.v{font-weight:700}.big{font-size:16px;color:#185FA5}ul{padding-left:18px}li{margin:4px 0}</style></head><body><h2>${firm} — Service Quote</h2><div class="r"><span>Client</span><span class="v">${q.clientName}</span></div><div class="r"><span>Date</span><span class="v">${q.date}</span></div><div class="r"><span>Service</span><span class="v">${q.svcName}</span></div><div class="r"><span>Total Fees</span><span class="v big">₹${(q.price||0).toLocaleString("en-IN")}</span></div><h3>Documents Required</h3><ul>${(q.docs||[]).map(d=>`<li>${d}</li>`).join("")}</ul></body></html>`;
+  window.open(URL.createObjectURL(new Blob([html],{type:"text/html"})),"_blank");
+}
+function delQ(id){savedQ=savedQ.filter(q=>q.id!==id);localStorage.setItem("fintax_q",JSON.stringify(savedQ));renderQuotes();}
+
+/* SCREEN NAV */
+function showScreen(name){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".bnav-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("sc-"+name).classList.add("active");
+  document.getElementById("bn-"+name).classList.add("active");
+  document.getElementById("appBody").scrollTo(0,0);
+}
+
+/* SHEET */
+function showSheet(title,body,btns){
+  document.getElementById("shTitle").textContent=title;
+  document.getElementById("shBody").textContent=body;
+  const bc=document.getElementById("shBtns");bc.innerHTML="";
+  btns.forEach(b=>{const btn=document.createElement("button");btn.className="s-btn "+b.cls;btn.textContent=b.lbl;btn.onclick=b.fn;bc.appendChild(btn);});
+  document.getElementById("sheetOv").classList.add("open");
+}
+function closeSheet(){document.getElementById("sheetOv").classList.remove("open");}
+function closeSheetOv(e){if(e.target===document.getElementById("sheetOv"))closeSheet();}
+
+/* BOOT */
+window.addEventListener("load",async()=>{
+  await init();
+  if(sessionStorage.getItem("tfa")==="1"){
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("mainApp").classList.remove("hidden");
+    loadAll();
+  }
+});
+</script>
+</body>
+</html>

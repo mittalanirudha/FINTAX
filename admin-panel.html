@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — Tax Firm</title>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue:#185FA5; --blue-light:#E6F1FB; --blue-dark:#0C447C;
+    --green:#1D9E75; --green-light:#E1F5EE;
+    --amber:#EF9F27; --amber-light:#FAEEDA; --amber-dark:#633806;
+    --red:#E24B4A; --red-light:#FCEBEB;
+    --gray-50:#F8F9FA; --gray-100:#F1F3F5; --gray-200:#E9ECEF;
+    --gray-400:#ADB5BD; --gray-600:#6C757D; --gray-800:#343A40;
+    --white:#FFFFFF;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.08);
+    --shadow-md:0 4px 12px rgba(0,0,0,.10);
+    --radius-sm:6px; --radius-md:10px; --radius-lg:14px;
+    --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  }
+  body { font-family:var(--font); background:var(--gray-100); color:var(--gray-800); font-size:14px; min-height:100vh; }
+
+  /* ─── LOGIN ─── */
+  #loginScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--gray-100); }
+  .login-card { background:white; border-radius:var(--radius-lg); box-shadow:var(--shadow-md); padding:36px 32px; width:100%; max-width:360px; text-align:center; }
+  .login-logo { width:56px; height:56px; border-radius:50%; background:#E24B4A; color:white; font-size:20px; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; }
+  .login-title { font-size:18px; font-weight:700; color:var(--gray-800); margin-bottom:4px; }
+  .login-sub   { font-size:12px; color:var(--gray-600); margin-bottom:22px; }
+  .login-card input { width:100%; padding:10px 14px; border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); font-size:14px; margin-bottom:12px; outline:none; }
+  .login-card input:focus { border-color:#E24B4A; }
+  .btn-login { width:100%; padding:11px; background:#E24B4A; color:white; border:none; border-radius:var(--radius-sm); font-size:14px; font-weight:600; cursor:pointer; }
+  .btn-login:hover { background:#a32d2d; }
+  .login-error { color:var(--red); font-size:12px; margin-top:8px; display:none; }
+
+  /* ─── LAYOUT ─── */
+  .admin-layout { display:flex; min-height:100vh; }
+  .sidebar { width:220px; background:var(--gray-800); flex-shrink:0; padding:20px 0; position:sticky; top:0; height:100vh; overflow-y:auto; }
+  .sidebar-logo { display:flex; align-items:center; gap:10px; padding:0 18px 20px; border-bottom:1px solid rgba(255,255,255,.1); }
+  .sidebar-circle { width:36px; height:36px; border-radius:50%; background:#E24B4A; color:white; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .sidebar-firm { font-size:13px; font-weight:600; color:white; }
+  .sidebar-role { font-size:10px; color:var(--gray-400); margin-top:1px; }
+  .nav-section { padding:14px 18px 6px; font-size:10px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:.08em; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:10px 18px; font-size:13px; color:var(--gray-400); cursor:pointer; transition:all .15s; text-decoration:none; }
+  .nav-item:hover { background:rgba(255,255,255,.07); color:white; }
+  .nav-item.active { background:rgba(255,255,255,.1); color:white; border-left:3px solid #E24B4A; padding-left:15px; }
+  .nav-item-icon { font-size:15px; width:20px; text-align:center; }
+  .sidebar-footer { padding:16px 18px; border-top:1px solid rgba(255,255,255,.1); margin-top:auto; }
+  .btn-logout { width:100%; padding:8px; background:rgba(255,255,255,.08); color:white; border:1px solid rgba(255,255,255,.15); border-radius:var(--radius-sm); font-size:12px; cursor:pointer; }
+
+  .main-content { flex:1; padding:24px; overflow-x:hidden; }
+
+  /* ─── TOPBAR ─── */
+  .main-topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:10px; }
+  .page-title { font-size:20px; font-weight:700; color:var(--gray-800); }
+  .page-sub { font-size:12px; color:var(--gray-600); margin-top:2px; }
+
+  /* ─── TOAST ─── */
+  .toast { display:none; position:fixed; top:20px; right:20px; background:var(--green); color:white; padding:12px 20px; border-radius:var(--radius-md); font-size:13px; font-weight:600; z-index:9999; box-shadow:var(--shadow-md); }
+  .toast.error { background:var(--red); }
+
+  /* ─── CARDS / SECTIONS ─── */
+  .card { background:white; border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); padding:22px; margin-bottom:20px; }
+  .card-title { font-size:15px; font-weight:700; color:var(--gray-800); margin-bottom:4px; }
+  .card-sub   { font-size:12px; color:var(--gray-600); margin-bottom:18px; }
+  .section-divider { border:none; border-top:1px solid var(--gray-200); margin:18px 0; }
+
+  /* ─── FORM FIELDS ─── */
+  .form-grid { display:grid; gap:14px; margin-bottom:16px; }
+  .form-grid.cols-2 { grid-template-columns:1fr 1fr; }
+  .form-grid.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+  @media(max-width:700px) { .form-grid.cols-2, .form-grid.cols-3 { grid-template-columns:1fr; } }
+  .field { display:flex; flex-direction:column; gap:5px; }
+  .field label { font-size:12px; font-weight:600; color:var(--gray-600); }
+  .field input, .field textarea, .field select { padding:9px 12px; border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); font-size:13px; outline:none; font-family:inherit; background:white; color:var(--gray-800); transition:border .2s; }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color:var(--blue); }
+  .field textarea { resize:vertical; min-height:90px; }
+
+  /* ─── BUTTONS ─── */
+  .btn { padding:9px 18px; font-size:13px; font-weight:600; border-radius:var(--radius-sm); cursor:pointer; border:none; transition:opacity .15s; }
+  .btn:hover { opacity:.85; }
+  .btn-primary { background:var(--blue); color:white; }
+  .btn-success { background:var(--green); color:white; }
+  .btn-danger  { background:var(--red); color:white; }
+  .btn-gray    { background:var(--gray-200); color:var(--gray-800); }
+  .btn-sm { padding:5px 12px; font-size:12px; border-radius:var(--radius-sm); cursor:pointer; border:none; font-weight:600; }
+
+  /* ─── STATS ROW ─── */
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; margin-bottom:20px; }
+  .stat-card { background:white; border-radius:var(--radius-md); box-shadow:var(--shadow-sm); padding:16px; }
+  .stat-label { font-size:12px; color:var(--gray-600); margin-bottom:6px; }
+  .stat-value { font-size:24px; font-weight:700; color:var(--gray-800); }
+  .stat-value.blue  { color:var(--blue); }
+  .stat-value.green { color:var(--green); }
+
+  /* ─── SERVICES TABLE ─── */
+  .table-wrap { overflow-x:auto; }
+  .services-table { width:100%; border-collapse:collapse; font-size:13px; min-width:700px; }
+  .services-table th { text-align:left; padding:10px 12px; background:var(--gray-50); border-bottom:2px solid var(--gray-200); font-size:11px; font-weight:700; color:var(--gray-600); text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+  .services-table td { padding:10px 12px; border-bottom:1px solid var(--gray-200); vertical-align:middle; }
+  .services-table tr:hover td { background:var(--gray-50); }
+  .services-table input { width:100%; padding:5px 8px; border:1.5px solid transparent; border-radius:var(--radius-sm); font-size:12px; background:transparent; outline:none; color:var(--gray-800); }
+  .services-table input:focus { border-color:var(--blue); background:white; }
+  .services-table input[type=number] { width:80px; }
+  .svc-cat-badge { font-size:11px; padding:3px 8px; border-radius:10px; background:var(--blue-light); color:var(--blue-dark); font-weight:500; white-space:nowrap; }
+  .partner-tag { display:inline-block; font-size:10px; padding:2px 7px; border-radius:8px; background:var(--green-light); color:var(--green); margin:2px; font-weight:500; }
+
+  /* ─── ADD SERVICE FORM ─── */
+  .add-service-panel { background:var(--blue-light); border:1.5px solid var(--blue); border-radius:var(--radius-lg); padding:20px; margin-bottom:20px; display:none; }
+  .add-service-panel.visible { display:block; }
+  .add-panel-title { font-size:14px; font-weight:700; color:var(--blue-dark); margin-bottom:14px; }
+
+  /* ─── PARTNER MANAGEMENT ─── */
+  .partner-card { background:white; border:1.5px solid var(--gray-200); border-radius:var(--radius-md); padding:16px; margin-bottom:12px; }
+  .partner-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .partner-name { font-size:14px; font-weight:700; }
+  .partner-city { font-size:12px; color:var(--gray-600); }
+
+  /* ─── SECTION VIEWS ─── */
+  .section-view { display:none; }
+  .section-view.active { display:block; }
+
+  /* ─── MOBILE SIDEBAR ─── */
+  @media(max-width:768px) {
+    .admin-layout { flex-direction:column; }
+    .sidebar { width:100%; height:auto; position:relative; }
+    .sidebar-footer { display:none; }
+    .nav-section { display:none; }
+    .nav-item { display:inline-flex; padding:8px 14px; }
+    .main-content { padding:16px; }
+  }
+
+  /* ─── MODAL ─── */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:2000; align-items:center; justify-content:center; padding:20px; }
+  .modal-overlay.open { display:flex; }
+  .modal-box { background:white; border-radius:var(--radius-lg); padding:24px; width:100%; max-width:440px; box-shadow:var(--shadow-md); }
+  .modal-box h3 { font-size:16px; font-weight:700; margin-bottom:8px; }
+  .modal-box p  { font-size:13px; color:var(--gray-600); margin-bottom:18px; line-height:1.6; }
+  .modal-btns { display:flex; gap:8px; justify-content:flex-end; }
+
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<!-- ════════════ LOGIN ════════════ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">🔐</div>
+    <div class="login-title">Admin Panel</div>
+    <div class="login-sub">Sirf authorized admin ke liye</div>
+    <input type="text" id="loginUser" placeholder="Username" onkeydown="if(event.key==='Enter')doAdminLogin()"/>
+    <input type="password" id="loginPass" placeholder="Password" onkeydown="if(event.key==='Enter')doAdminLogin()"/>
+    <button class="btn-login" onclick="doAdminLogin()">Admin Login →</button>
+    <div class="login-error" id="loginError">❌ Galat credentials. Dobara try karein.</div>
+  </div>
+</div>
+
+<!-- ════════════ ADMIN APP ════════════ -->
+<div id="adminApp" class="hidden">
+  <div class="admin-layout">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-circle" id="sbCircle">TF</div>
+        <div>
+          <div class="sidebar-firm" id="sbFirmName">Tax Firm</div>
+          <div class="sidebar-role">Admin Panel</div>
+        </div>
+      </div>
+      <div class="nav-section">Main</div>
+      <a class="nav-item active" id="nav-dashboard" onclick="showSection('dashboard')">
+        <span class="nav-item-icon">📊</span> Dashboard
+      </a>
+      <a class="nav-item" id="nav-services" onclick="showSection('services')">
+        <span class="nav-item-icon">📋</span> Services
+      </a>
+      <a class="nav-item" id="nav-partners" onclick="showSection('partners')">
+        <span class="nav-item-icon">🤝</span> Partners
+      </a>
+      <div class="nav-section">Settings</div>
+      <a class="nav-item" id="nav-settings" onclick="showSection('settings')">
+        <span class="nav-item-icon">⚙️</span> Firm Settings
+      </a>
+      <div class="sidebar-footer">
+        <button class="btn-logout" onclick="doLogout()">🚪 Logout</button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+
+      <!-- Toast -->
+      <div class="toast" id="toast"></div>
+
+      <!-- ── DASHBOARD ── -->
+      <div class="section-view active" id="sec-dashboard">
+        <div class="main-topbar">
+          <div><div class="page-title">Dashboard</div><div class="page-sub">Apni firm ka overview dekhein</div></div>
+        </div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="card">
+          <div class="card-title">🚀 Quick Actions</div>
+          <div class="card-sub">Seedha jump karein</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="showSection('services')">📋 Services Manage karein</button>
+            <button class="btn btn-gray" onclick="showSection('partners')">🤝 Partners Manage karein</button>
+            <button class="btn btn-gray" onclick="showSection('settings')">⚙️ Firm Settings update karein</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📖 Tool kaise use karein</div>
+          <div class="card-sub">Franchise partner tool ka link share karo — unhe sirf partner password pata hoga</div>
+          <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-sm);padding:12px;font-size:13px;color:var(--gray-600);line-height:1.8">
+            <b>Step 1:</b> Firebase setup karein (neeche instructions hain)<br>
+            <b>Step 2:</b> <code>franchise-tool.html</code> aur <code>admin-panel.html</code> WordPress pe upload karein<br>
+            <b>Step 3:</b> Dono files mein Firebase config paste karein<br>
+            <b>Step 4:</b> Services add karein aur partner password set karein<br>
+            <b>Step 5:</b> Franchise partners ko <code>franchise-tool.html</code> ka link bhejein ✅
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SERVICES ── -->
+      <div class="section-view" id="sec-services">
+        <div class="main-topbar">
+          <div><div class="page-title">Services Manage karein</div><div class="page-sub">Prices, documents aur details update karein</div></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-success" onclick="saveAllServices()">💾 Save All Changes</button>
+            <button class="btn btn-primary" onclick="toggleAddPanel()">+ Nayi Service</button>
+          </div>
+        </div>
+
+        <!-- Add Service Panel -->
+        <div class="add-service-panel" id="addServicePanel">
+          <div class="add-panel-title">➕ Nayi Service Add karein</div>
+          <div class="form-grid cols-3">
+            <div class="field"><label>Service Naam *</label><input id="ns-name" placeholder="e.g. GST Annual Return"/></div>
+            <div class="field"><label>Category *</label><input id="ns-cat" placeholder="e.g. GST"/></div>
+            <div class="field"><label>Icon (emoji)</label><input id="ns-icon" placeholder="e.g. 📋" maxlength="4"/></div>
+          </div>
+          <div class="form-grid cols-3">
+            <div class="field"><label>Hamara Base Price (₹) *</label><input type="number" id="ns-our" placeholder="0"/></div>
+            <div class="field"><label>Suggested Client Price (₹) *</label><input type="number" id="ns-client" placeholder="0"/></div>
+            <div class="field"><label>Timeline</label><input id="ns-time" placeholder="e.g. 3–5 working days"/></div>
+          </div>
+          <div class="form-grid cols-2">
+            <div class="field">
+              <label>Documents Required (ek line mein ek document)</label>
+              <textarea id="ns-docs" placeholder="PAN Card&#10;Aadhaar Card&#10;Bank Statement (3 months)&#10;GST Certificate"></textarea>
+            </div>
+            <div class="field">
+              <label>Partner Note / Warning</label>
+              <textarea id="ns-note" placeholder="Important note jo franchise partner ko dikhni chahiye..."></textarea>
+            </div>
+          </div>
+          <div class="form-grid cols-2">
+            <div class="field">
+              <label>Partner Visibility (kaunse partners ko dikhein — blank = sab)</label>
+              <input id="ns-partners" placeholder="e.g. partner1, partner2 (comma-separated partner IDs)"/>
+            </div>
+            <div class="field" style="justify-content:flex-end;padding-top:18px">
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-success" onclick="addService()">✅ Add Service</button>
+                <button class="btn btn-gray" onclick="toggleAddPanel()">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Services Table -->
+        <div class="card" style="padding:0">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div class="card-title" style="margin-bottom:0">All Services</div>
+            </div>
+            <input type="text" id="svcSearch" placeholder="Search services..." style="padding:7px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;outline:none;width:200px" oninput="filterServicesTable()"/>
+          </div>
+          <div class="table-wrap">
+            <table class="services-table" id="servicesTable">
+              <thead>
+                <tr>
+                  <th style="width:30px">#</th>
+                  <th>Service Naam</th>
+                  <th>Category</th>
+                  <th>Hamara Price</th>
+                  <th>Client Price</th>
+                  <th>Earning</th>
+                  <th>Timeline</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="servicesTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PARTNERS ── -->
+      <div class="section-view" id="sec-partners">
+        <div class="main-topbar">
+          <div><div class="page-title">Franchise Partners</div><div class="page-sub">Partners manage karein, branding aur passwords set karein</div></div>
+          <button class="btn btn-primary" onclick="showAddPartner()">+ Partner Add karein</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🔑 Global Partner Password</div>
+          <div class="card-sub">Sabhi franchise partners ke liye ek hi password. Isse change karne se sab partners ka password change ho jaata hai.</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="globalPartnerPass" style="padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;outline:none;width:220px" placeholder="Partner password..."/>
+            <button class="btn btn-success" onclick="saveGlobalPass()">💾 Password Save karein</button>
+          </div>
+        </div>
+
+        <div class="card" id="partnersList">
+          <div class="card-title">👥 Partner List</div>
+          <div class="card-sub">Har partner ki branding alag set kar sakte hain (Optional — agar sirf ek brand chahiye to zaroori nahi)</div>
+          <div id="partnersContainer"><div style="color:var(--gray-600);font-size:13px;padding:20px 0;text-align:center">Loading partners...</div></div>
+        </div>
+
+        <!-- Add Partner Form -->
+        <div class="card hidden" id="addPartnerCard">
+          <div class="card-title">➕ Nayi Partner Add karein</div>
+          <div class="form-grid cols-2">
+            <div class="field"><label>Partner / Firm Naam *</label><input id="p-name" placeholder="e.g. Delhi Franchise — Rohit Sharma"/></div>
+            <div class="field"><label>City</label><input id="p-city" placeholder="e.g. Delhi"/></div>
+            <div class="field"><label>Partner ID (short, no spaces) *</label><input id="p-id" placeholder="e.g. delhi01" oninput="this.value=this.value.replace(/\s/g,'').toLowerCase()"/></div>
+            <div class="field"><label>Phone</label><input id="p-phone" placeholder="+91 98765 43210"/></div>
+            <div class="field"><label>Custom Brand Naam (optional)</label><input id="p-brand" placeholder="Same as main firm ho to blank rakhein"/></div>
+            <div class="field"><label>Custom Logo Initials (optional)</label><input id="p-initials" placeholder="e.g. RS" maxlength="2"/></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-success" onclick="saveNewPartner()">✅ Partner Save karein</button>
+            <button class="btn btn-gray" onclick="hideAddPartner()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SETTINGS ── -->
+      <div class="section-view" id="sec-settings">
+        <div class="main-topbar">
+          <div><div class="page-title">Firm Settings</div><div class="page-sub">Aapki firm ki details aur admin credentials</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🏢 Firm Details</div>
+          <div class="card-sub">Yeh details franchise partner tool mein aur PDF quotes mein use hongi</div>
+          <div class="form-grid cols-2">
+            <div class="field"><label>Firm ka Naam *</label><input id="s-firmName" placeholder="e.g. ABC Tax Consultants"/></div>
+            <div class="field"><label>Tagline / Description</label><input id="s-tagline" placeholder="e.g. Trusted Tax & Compliance Experts"/></div>
+            <div class="field"><label>Phone Number</label><input id="s-phone" placeholder="+91 98765 43210"/></div>
+            <div class="field"><label>Email</label><input id="s-email" placeholder="info@yourfirm.com"/></div>
+            <div class="field"><label>Website</label><input id="s-website" placeholder="https://yourfirm.com"/></div>
+            <div class="field"><label>City / Address</label><input id="s-address" placeholder="e.g. New Delhi"/></div>
+          </div>
+          <div class="field" style="margin-bottom:16px">
+            <label>Client Quote Footer Message</label>
+            <textarea id="s-footer" placeholder="e.g. Yeh ek professional quote hai. GST extra applicable hogi. Documents time par submit karein." style="height:70px"></textarea>
+          </div>
+          <button class="btn btn-success" onclick="saveFirmSettings()">💾 Firm Details Save karein</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🔐 Admin Credentials</div>
+          <div class="card-sub">Admin panel ke liye username aur password. Kisi ko share mat karein.</div>
+          <div class="form-grid cols-3">
+            <div class="field"><label>Admin Username</label><input id="s-adminUser" placeholder="admin"/></div>
+            <div class="field"><label>Admin Password</label><input type="password" id="s-adminPass" placeholder="Naya password (blank = no change)"/></div>
+            <div class="field"><label>Confirm Password</label><input type="password" id="s-adminPassConfirm" placeholder="Dobara type karein"/></div>
+          </div>
+          <button class="btn btn-primary" onclick="saveAdminCreds()">🔐 Credentials Update karein</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🔥 Firebase Setup Instructions</div>
+          <div class="card-sub">Pehli baar setup ke liye yeh steps follow karein</div>
+          <div style="font-size:13px;line-height:2;color:var(--gray-800)">
+            <b>Step 1:</b> <a href="https://console.firebase.google.com" target="_blank" style="color:var(--blue)">console.firebase.google.com</a> pe jaao → New Project banao<br>
+            <b>Step 2:</b> Project mein "Firestore Database" enable karo (Start in test mode)<br>
+            <b>Step 3:</b> Project Settings → General → "Your apps" → Web app add karo<br>
+            <b>Step 4:</b> Firebase config copy karo (apiKey, projectId etc.)<br>
+            <b>Step 5:</b> Dono HTML files mein <code>FIREBASE_CONFIG</code> object mein apna config paste karo<br>
+            <b>Step 6:</b> Dono files WordPress Media Library ya FTP se upload karo<br>
+            <b>Step 7:</b> WordPress mein do Pages banao → HTML embed karo (yahan <a href="#" style="color:var(--blue)">instructions dekhein</a>)<br>
+            <br>
+            <b style="color:var(--red)">⚠️ Security:</b> Firestore Rules mein sirf authenticated read/write allow karo (admin panel se set hoga) — default test mode 30 din baad expire hoti hai!
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main-content -->
+  </div><!-- /admin-layout -->
+</div><!-- /adminApp -->
+
+<!-- Edit Docs Modal -->
+<div class="modal-overlay" id="docsModal">
+  <div class="modal-box" style="max-width:500px">
+    <h3>📄 Documents Edit karein</h3>
+    <p style="margin-bottom:10px;font-size:12px;color:var(--gray-600)">Ek line mein ek document likhein</p>
+    <textarea id="docsEditArea" style="width:100%;height:200px;padding:10px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;outline:none;font-family:inherit;resize:vertical" placeholder="Document 1&#10;Document 2&#10;..."></textarea>
+    <div style="margin-top:8px;color:#666;font-size:12px" id="docsEditNote"></div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="btn btn-gray" onclick="closeDocsModal()">Cancel</button>
+      <button class="btn btn-success" onclick="saveDocsFromModal()">✅ Save Docs</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box">
+    <h3 id="confirmTitle">Confirm karein</h3>
+    <p id="confirmBody">Kya aap sure hain?</p>
+    <div class="modal-btns">
+      <button class="btn btn-gray" onclick="closeConfirmModal()">Cancel</button>
+      <button class="btn btn-danger" id="confirmOkBtn">Haan, Delete karein</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   🔧 FIREBASE CONFIG — Yahan apna config paste karein
+   ═══════════════════════════════════════════════ */
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyBGJl3D5LjPp_TTuB7BMoi_sJYrUpM6bu0",
+  authDomain:        "fintax-29b28.firebaseapp.com",
+  projectId:         "fintax-29b28",
+  storageBucket:     "fintax-29b28.firebasestorage.app",
+  messagingSenderId: "268378181920",
+  appId:             "1:268378181920:web:7540bd4fe62e9b0aa30745",
+  measurementId:     "G-KV0KTN0TPZ"
+};
+
+/* ─── Default admin credentials (pehle login ke liye) ─── */
+const DEFAULT_ADMIN_USER = "admin";
+const DEFAULT_ADMIN_PASS = "Admin@123";
+
+/* ═══════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════ */
+let db;
+let services  = [];
+let partners  = [];
+let firmSettings = {};
+let editingDocsSvcId = null;
+let svcSearchVal = "";
+
+/* ═══════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════ */
+async function init() {
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+  } catch(e) { showToast("Firebase config error! Instructions check karein.", true); }
+}
+
+/* ═══════════════════════════════════════════════
+   LOGIN
+   ═══════════════════════════════════════════════ */
+async function doAdminLogin() {
+  const user = document.getElementById("loginUser").value.trim();
+  const pass = document.getElementById("loginPass").value;
+  // Load settings to check credentials
+  let storedUser = DEFAULT_ADMIN_USER, storedPass = DEFAULT_ADMIN_PASS;
+  try {
+    const doc = await db.collection("config").doc("settings").get();
+    if (doc.exists && doc.data().adminUser) storedUser = doc.data().adminUser;
+    if (doc.exists && doc.data().adminPass) storedPass = doc.data().adminPass;
+  } catch(e) {}
+  if (user === storedUser && pass === storedPass) {
+    sessionStorage.setItem("tfadmin", "true");
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("adminApp").classList.remove("hidden");
+    await loadAll();
+  } else {
+    document.getElementById("loginError").style.display = "block";
+    setTimeout(() => document.getElementById("loginError").style.display = "none", 3000);
+  }
+}
+
+function doLogout() { sessionStorage.removeItem("tfadmin"); location.reload(); }
+
+/* ═══════════════════════════════════════════════
+   LOAD ALL
+   ═══════════════════════════════════════════════ */
+async function loadAll() {
+  await Promise.all([loadFirmSettings(), loadServices(), loadPartners()]);
+  applyBranding();
+  renderStats();
+  renderServicesTable();
+  renderPartnersSection();
+  populateSettingsForm();
+}
+
+async function loadFirmSettings() {
+  try {
+    const doc = await db.collection("config").doc("settings").get();
+    firmSettings = doc.exists ? doc.data() : {};
+  } catch(e) { firmSettings = {}; }
+}
+
+async function loadServices() {
+  try {
+    const snap = await db.collection("services").orderBy("order").get();
+    if (!snap.empty) { services = snap.docs.map(d => ({ id: d.id, ...d.data() })); return; }
+  } catch(e) {}
+  // Seed default services if Firestore is empty
+  services = getDefaultServices();
+  await seedDefaultServices();
+}
+
+async function seedDefaultServices() {
+  const batch = db.batch();
+  services.forEach((s, i) => {
+    const ref = db.collection("services").doc("svc_" + (i+1));
+    batch.set(ref, { ...s, order: i });
+  });
+  try { await batch.commit(); } catch(e) { console.error("Seed error:", e); }
+}
+
+async function loadPartners() {
+  try {
+    const snap = await db.collection("partners").get();
+    partners = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) { partners = []; }
+}
+
+/* ═══════════════════════════════════════════════
+   BRANDING
+   ═══════════════════════════════════════════════ */
+function applyBranding() {
+  const name = firmSettings.firmName || "Tax Firm";
+  const init = name.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase();
+  document.getElementById("sbFirmName").textContent = name;
+  document.getElementById("sbCircle").textContent   = init;
+  document.title = "Admin — " + name;
+}
+
+/* ═══════════════════════════════════════════════
+   STATS
+   ═══════════════════════════════════════════════ */
+function renderStats() {
+  const cats = new Set(services.map(s => s.cat));
+  const avgMargin = services.length
+    ? Math.round(services.reduce((sum, s) => sum + (s.clientPrice && s.ourPrice ? ((s.clientPrice - s.ourPrice)/s.clientPrice)*100 : 0), 0) / services.length)
+    : 0;
+  document.getElementById("statsGrid").innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total Services</div><div class="stat-value blue">${services.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Categories</div><div class="stat-value">${cats.size}</div></div>
+    <div class="stat-card"><div class="stat-label">Avg. Margin</div><div class="stat-value green">${avgMargin}%</div></div>
+    <div class="stat-card"><div class="stat-label">Partners</div><div class="stat-value">${partners.length}</div></div>`;
+}
+
+/* ═══════════════════════════════════════════════
+   SERVICES TABLE
+   ═══════════════════════════════════════════════ */
+function renderServicesTable() {
+  const sv = svcSearchVal.toLowerCase();
+  const filtered = services.filter(s => !sv || (s.name||"").toLowerCase().includes(sv) || (s.cat||"").toLowerCase().includes(sv));
+  const tbody = document.getElementById("servicesTbody");
+  tbody.innerHTML = filtered.map((s, i) => {
+    const profit = (s.clientPrice||0) - (s.ourPrice||0);
+    const margin = s.clientPrice ? Math.round((profit/s.clientPrice)*100) : 0;
+    return `
+    <tr data-id="${s.id}">
+      <td style="color:var(--gray-400);font-size:12px">${i+1}</td>
+      <td>
+        <input value="${esc(s.name)}" style="font-weight:600;min-width:160px" onchange="updateSvcField('${s.id}','name',this.value)"/>
+        <div style="margin-top:3px">
+          <input value="${esc(s.icon||'📋')}" style="width:40px;font-size:16px" onchange="updateSvcField('${s.id}','icon',this.value)"/>
+        </div>
+      </td>
+      <td><input value="${esc(s.cat)}" style="width:110px" onchange="updateSvcField('${s.id}','cat',this.value)"/></td>
+      <td><input type="number" value="${s.ourPrice||0}" style="width:80px" onchange="updateSvcField('${s.id}','ourPrice',parseInt(this.value)||0)"/></td>
+      <td><input type="number" value="${s.clientPrice||0}" style="width:80px" onchange="updateSvcField('${s.id}','clientPrice',parseInt(this.value)||0)"/></td>
+      <td style="color:${margin>=30?'var(--green)':margin>=10?'var(--amber-dark)':'var(--red)'};font-weight:600;white-space:nowrap">
+        ₹${profit.toLocaleString("en-IN")} (${margin}%)
+      </td>
+      <td><input value="${esc(s.timeline||'')}" style="min-width:120px" onchange="updateSvcField('${s.id}','timeline',this.value)"/></td>
+      <td style="white-space:nowrap">
+        <button class="btn-sm" style="background:var(--blue-light);color:var(--blue-dark)" onclick="openDocsModal('${s.id}')">📄 Docs (${(s.docs||[]).length})</button>
+        &nbsp;
+        <button class="btn-sm" style="background:var(--red-light);color:var(--red)" onclick="confirmDelete('${s.id}','${esc(s.name)}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function filterServicesTable() {
+  svcSearchVal = document.getElementById("svcSearch").value;
+  renderServicesTable();
+}
+
+function updateSvcField(id, field, value) {
+  const svc = services.find(s => s.id === id);
+  if (svc) svc[field] = value;
+  if (field === "clientPrice" || field === "ourPrice") renderServicesTable();
+}
+
+async function saveAllServices() {
+  try {
+    const batch = db.batch();
+    services.forEach((s, i) => {
+      const ref = db.collection("services").doc(s.id);
+      batch.set(ref, { ...s, order: i });
+    });
+    await batch.commit();
+    showToast("✅ Saari services save ho gayi!");
+    renderStats();
+  } catch(e) { showToast("❌ Save failed: " + e.message, true); }
+}
+
+function toggleAddPanel() {
+  const p = document.getElementById("addServicePanel");
+  p.classList.toggle("visible");
+}
+
+async function addService() {
+  const name = document.getElementById("ns-name").value.trim();
+  if (!name) { showToast("Service naam zaroori hai!", true); return; }
+  const docsRaw = document.getElementById("ns-docs").value.trim();
+  const docs    = docsRaw ? docsRaw.split("\n").map(d => d.trim()).filter(Boolean) : [];
+  const newId   = "svc_" + Date.now();
+  const newSvc  = {
+    id:          newId,
+    name,
+    cat:         document.getElementById("ns-cat").value.trim()    || "Other",
+    icon:        document.getElementById("ns-icon").value.trim()   || "📋",
+    ourPrice:    parseInt(document.getElementById("ns-our").value)    || 0,
+    clientPrice: parseInt(document.getElementById("ns-client").value) || 0,
+    timeline:    document.getElementById("ns-time").value.trim()   || "TBD",
+    docs,
+    note:        document.getElementById("ns-note").value.trim()   || "",
+    partnerIds:  document.getElementById("ns-partners").value.split(",").map(p=>p.trim()).filter(Boolean),
+    order:       services.length
+  };
+  try {
+    await db.collection("services").doc(newId).set(newSvc);
+    services.push(newSvc);
+    renderServicesTable(); renderStats();
+    toggleAddPanel();
+    ["ns-name","ns-cat","ns-icon","ns-our","ns-client","ns-time","ns-docs","ns-note","ns-partners"].forEach(id => document.getElementById(id).value = "");
+    showToast("✅ Nayi service add ho gayi!");
+  } catch(e) { showToast("❌ Error: " + e.message, true); }
+}
+
+/* ─── Docs Modal ─── */
+function openDocsModal(id) {
+  editingDocsSvcId = id;
+  const s = services.find(x => x.id === id);
+  document.getElementById("docsEditArea").value = (s.docs || []).join("\n");
+  document.getElementById("docsEditNote").textContent = "Service: " + s.name;
+  document.getElementById("docsModal").classList.add("open");
+}
+
+function closeDocsModal() { document.getElementById("docsModal").classList.remove("open"); editingDocsSvcId = null; }
+
+function saveDocsFromModal() {
+  const raw  = document.getElementById("docsEditArea").value.trim();
+  const docs = raw ? raw.split("\n").map(d => d.trim()).filter(Boolean) : [];
+  const svc  = services.find(x => x.id === editingDocsSvcId);
+  if (svc) svc.docs = docs;
+  closeDocsModal();
+  renderServicesTable();
+  showToast("Docs updated — 'Save All' click karein to permanently save.");
+}
+
+/* ─── Delete ─── */
+function confirmDelete(id, name) {
+  document.getElementById("confirmTitle").textContent = "Service Delete karein?";
+  document.getElementById("confirmBody").textContent  = `"${name}" ko permanently delete karna chahte hain?`;
+  document.getElementById("confirmOkBtn").onclick = () => deleteService(id);
+  document.getElementById("confirmModal").classList.add("open");
+}
+function closeConfirmModal() { document.getElementById("confirmModal").classList.remove("open"); }
+
+async function deleteService(id) {
+  try {
+    await db.collection("services").doc(id).delete();
+    services = services.filter(s => s.id !== id);
+    renderServicesTable(); renderStats();
+    closeConfirmModal();
+    showToast("🗑️ Service delete ho gayi.");
+  } catch(e) { showToast("❌ Delete failed: " + e.message, true); }
+}
+
+/* ═══════════════════════════════════════════════
+   PARTNERS
+   ═══════════════════════════════════════════════ */
+function renderPartnersSection() {
+  const gp = firmSettings.partnerPass || "partner123";
+  document.getElementById("globalPartnerPass").value = gp;
+  const container = document.getElementById("partnersContainer");
+  if (!partners.length) {
+    container.innerHTML = `<div style="text-align:center;padding:20px;color:var(--gray-600);font-size:13px">Abhi tak koi partner add nahi kiya. "+ Partner Add karein" button use karein.</div>`;
+    return;
+  }
+  container.innerHTML = partners.map(p => `
+    <div class="partner-card">
+      <div class="partner-header">
+        <div>
+          <div class="partner-name">${p.name || "—"}</div>
+          <div class="partner-city">📍 ${p.city || "—"} &nbsp;|&nbsp; ID: <code>${p.id}</code></div>
+        </div>
+        <button class="btn-sm" style="background:var(--red-light);color:var(--red)" onclick="deletePartner('${p.id}')">🗑 Delete</button>
+      </div>
+      <div style="font-size:12px;color:var(--gray-600)">
+        ${p.phone ? "📞 "+p.phone+"&nbsp;&nbsp;" : ""}
+        ${p.brandName ? "🏷 Brand: "+p.brandName : ""}
+      </div>
+    </div>`).join("");
+}
+
+async function saveGlobalPass() {
+  firmSettings.partnerPass = document.getElementById("globalPartnerPass").value.trim() || "partner123";
+  await db.collection("config").doc("settings").set(firmSettings, { merge: true });
+  showToast("✅ Partner password save ho gaya!");
+}
+
+function showAddPartner()  { document.getElementById("addPartnerCard").classList.remove("hidden"); }
+function hideAddPartner()  { document.getElementById("addPartnerCard").classList.add("hidden"); }
+
+async function saveNewPartner() {
+  const pid = document.getElementById("p-id").value.trim();
+  const nm  = document.getElementById("p-name").value.trim();
+  if (!pid || !nm) { showToast("Partner ID aur Naam zaroori hai!", true); return; }
+  const partner = {
+    id:        pid,
+    name:      nm,
+    city:      document.getElementById("p-city").value.trim(),
+    phone:     document.getElementById("p-phone").value.trim(),
+    brandName: document.getElementById("p-brand").value.trim(),
+    initials:  document.getElementById("p-initials").value.trim().toUpperCase()
+  };
+  try {
+    await db.collection("partners").doc(pid).set(partner);
+    partners.push(partner);
+    renderPartnersSection(); renderStats();
+    hideAddPartner();
+    ["p-name","p-city","p-id","p-phone","p-brand","p-initials"].forEach(id => document.getElementById(id).value = "");
+    showToast("✅ Partner add ho gaya!");
+  } catch(e) { showToast("❌ Error: " + e.message, true); }
+}
+
+async function deletePartner(id) {
+  try {
+    await db.collection("partners").doc(id).delete();
+    partners = partners.filter(p => p.id !== id);
+    renderPartnersSection(); renderStats();
+    showToast("Partner delete ho gaya.");
+  } catch(e) { showToast("❌ Error: " + e.message, true); }
+}
+
+/* ═══════════════════════════════════════════════
+   FIRM SETTINGS
+   ═══════════════════════════════════════════════ */
+function populateSettingsForm() {
+  const s = firmSettings;
+  document.getElementById("s-firmName").value = s.firmName  || "";
+  document.getElementById("s-tagline").value  = s.tagline   || "";
+  document.getElementById("s-phone").value    = s.phone     || "";
+  document.getElementById("s-email").value    = s.email     || "";
+  document.getElementById("s-website").value  = s.website   || "";
+  document.getElementById("s-address").value  = s.address   || "";
+  document.getElementById("s-footer").value   = s.footer    || "";
+  document.getElementById("s-adminUser").value = s.adminUser || DEFAULT_ADMIN_USER;
+}
+
+async function saveFirmSettings() {
+  firmSettings.firmName = document.getElementById("s-firmName").value.trim() || firmSettings.firmName;
+  firmSettings.tagline  = document.getElementById("s-tagline").value.trim();
+  firmSettings.phone    = document.getElementById("s-phone").value.trim();
+  firmSettings.email    = document.getElementById("s-email").value.trim();
+  firmSettings.website  = document.getElementById("s-website").value.trim();
+  firmSettings.address  = document.getElementById("s-address").value.trim();
+  firmSettings.footer   = document.getElementById("s-footer").value.trim();
+  try {
+    await db.collection("config").doc("settings").set(firmSettings, { merge: true });
+    applyBranding();
+    showToast("✅ Firm settings save ho gayi!");
+  } catch(e) { showToast("❌ Error: " + e.message, true); }
+}
+
+async function saveAdminCreds() {
+  const user = document.getElementById("s-adminUser").value.trim();
+  const pass = document.getElementById("s-adminPass").value;
+  const conf = document.getElementById("s-adminPassConfirm").value;
+  if (pass && pass !== conf) { showToast("❌ Passwords match nahi karte!", true); return; }
+  if (user) firmSettings.adminUser = user;
+  if (pass) firmSettings.adminPass = pass;
+  try {
+    await db.collection("config").doc("settings").set(firmSettings, { merge: true });
+    document.getElementById("s-adminPass").value = "";
+    document.getElementById("s-adminPassConfirm").value = "";
+    showToast("✅ Admin credentials update ho gaye!");
+  } catch(e) { showToast("❌ Error: " + e.message, true); }
+}
+
+/* ═══════════════════════════════════════════════
+   NAVIGATION
+   ═══════════════════════════════════════════════ */
+function showSection(sec) {
+  document.querySelectorAll(".section-view").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+  document.getElementById("sec-" + sec).classList.add("active");
+  document.getElementById("nav-" + sec).classList.add("active");
+}
+
+/* ═══════════════════════════════════════════════
+   TOAST
+   ═══════════════════════════════════════════════ */
+function showToast(msg, isError = false) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className   = "toast" + (isError ? " error" : "");
+  t.style.display = "block";
+  setTimeout(() => t.style.display = "none", 3000);
+}
+
+/* ═══════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════ */
+function esc(s) { return (s||"").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+
+function getDefaultServices() {
+  return [
+    {name:"ITR — Salary (Old/New Regime)",cat:"Income Tax",icon:"📋",docs:["Form 16 / Salary slips","AIS / 26AS statement","PAN aur Aadhaar","Sabhi bank statements","Investment proofs (80C, 80D)","Home loan certificate (agar ho)"],ourPrice:499,clientPrice:999,timeline:"1–2 working days",note:"High volume service. Upsell karo ITR + Advance Tax planning.",partnerIds:[]},
+    {name:"ITR — Business / Profession",cat:"Income Tax",icon:"📊",docs:["Books of accounts / Tally data","GST returns (agar applicable)","PAN aur Aadhaar","Sabhi bank statements","Form 26AS / AIS","Asset purchase invoices"],ourPrice:1499,clientPrice:3499,timeline:"3–5 working days",note:"Audit applicable hai ya nahi check karo (44AB).",partnerIds:[]},
+    {name:"ITR — Capital Gains",cat:"Income Tax",icon:"📈",docs:["Demat / Capital gain statement","Property sale deed","Purchase deed / cost proof","PAN aur Aadhaar","Form 26AS / AIS"],ourPrice:1999,clientPrice:4499,timeline:"2–4 working days",note:"Crypto gains 30% flat tax — source confirm karo.",partnerIds:[]},
+    {name:"GST Registration",cat:"GST",icon:"🏷️",docs:["Business ka PAN","Proprietor ka Aadhaar","Passport size photograph","Business address proof","Bank details + cancelled cheque","Partnership deed / MOA (agar ho)"],ourPrice:699,clientPrice:1999,timeline:"3–7 working days",note:"Kuch states mein biometric verification hoti hai.",partnerIds:[]},
+    {name:"GST Return Filing (Monthly)",cat:"GST",icon:"🗂️",docs:["Purchase invoices (B2B)","Sales data / invoices","Bank statements","Previous GSTR-2B"],ourPrice:499,clientPrice:1499,timeline:"Same day (data 18th tak mile to)",note:"Late penalty ₹50/day — due dates ka reminder do.",partnerIds:[]},
+    {name:"Trademark Registration",cat:"Trademark & IP",icon:"™️",docs:["Trademark naam / logo file","Applicant ka PAN","Aadhaar / incorporation certificate","MSME certificate (discount ke liye)","Goods/services ka class"],ourPrice:4999,clientPrice:12999,timeline:"Filing: 2–3 din; Final: 18–24 mahine",note:"Govt fee: ₹4500 (MSME), ₹9000 (company). Class selection critical.",partnerIds:[]},
+    {name:"Pvt. Ltd. Company Registration",cat:"Company",icon:"🏢",docs:["Sabhi directors ka PAN aur Aadhaar","Directors ki photographs","Registered office proof","Property owner ka NOC","Company name ke 3 options"],ourPrice:3999,clientPrice:9999,timeline:"7–10 working days",note:"Min 2 directors aur 2 shareholders chahiye.",partnerIds:[]},
+    {name:"LLP Registration",cat:"Company",icon:"🤝",docs:["Sabhi partners ka PAN aur Aadhaar","Photographs","Registered office proof","LLP agreement (hum draft karenge)"],ourPrice:3499,clientPrice:8499,timeline:"7–10 working days",note:"Min 2 designated partners. Ek Indian resident hona zaroori.",partnerIds:[]},
+    {name:"MSME / Udyam Registration",cat:"Registrations",icon:"🔖",docs:["Proprietor/director ka Aadhaar","Business ka PAN","Bank account details","Business description aur NIC code"],ourPrice:299,clientPrice:799,timeline:"Same day",note:"Benefits: subsidies, priority lending, TM fee discount.",partnerIds:[]},
+    {name:"ROC Annual Compliance",cat:"Company",icon:"📝",docs:["Audited financial statements","Board resolution","Director KYC","Previous year filings","Share capital details"],ourPrice:4999,clientPrice:10999,timeline:"AGM deadline (30 Sep) se pehle",note:"AOC-4, MGT-7, ADT-1 included. Penalty ₹100/day per form.",partnerIds:[]}
+  ];
+}
+
+/* ═══════════════════════════════════════════════
+   BOOT
+   ═══════════════════════════════════════════════ */
+window.addEventListener("load", async () => {
+  await init();
+  if (sessionStorage.getItem("tfadmin") === "true") {
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("adminApp").classList.remove("hidden");
+    await loadAll();
+  }
+});
+</script>
+</body>
+</html>
