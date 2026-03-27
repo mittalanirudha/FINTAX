@@ -1,0 +1,87 @@
+mutation CreateDemoData @transaction @auth(level: USER, insecureReason: "This is a seed data mutation, not for general use") {
+  user1: user_insert(data: {
+    id: "550e8400-e29b-41d4-a716-446655440000",
+    email: "user1@example.com",
+    passwordHash: "hashedpassword1",
+    createdAt: "2023-01-01T00:00:00Z",
+    displayName: "Demo User 1",
+    currencyPreference: "USD"
+  })
+  user2: user_insert(data: {
+    id: "550e8400-e29b-41d4-a716-446655440001",
+    email: "user2@example.com",
+    passwordHash: "hashedpassword2",
+    createdAt: "2023-01-01T00:00:00Z",
+    displayName: "Demo User 2",
+    currencyPreference: "EUR"
+  })
+  category1: category_insert(data: {
+    id: "550e8400-e29b-41d4-a716-446655440002",
+    userId: "550e8400-e29b-41d4-a716-446655440000",
+    name: "Groceries",
+    type: "Expense",
+    createdAt: "2023-01-02T00:00:00Z",
+    iconUrl: "https://example.com/icons/groceries.png"
+  })
+  category2: category_insert(data: {
+    id: "550e8400-e29b-41d4-a716-446655440003",
+    userId: "550e8400-e29b-41d4-a716-446655440000",
+    name: "Salary",
+    type: "Income",
+    createdAt: "2023-01-02T00:00:00Z",
+    iconUrl: "https://example.com/icons/salary.png"
+  })
+  account1: account_insert(data: {
+    id: "550e8400-e29b-41d4-a716-446655440004",
+    userId: "550e8400-e29b-41d4-a716-446655440000",
+    name: "Checking Account",
+    type: "Bank",
+    balance: 1500.75,
+    createdAt: "2023-01-03T00:00:00Z",
+    description: "Primary checking account"
+  })
+  transaction1: transaction_insert(data: {
+    id: "550e8400-e29b-41d4-a716-446655440005",
+    userId: "550e8400-e29b-41d4-a716-446655440000",
+    accountId: "550e8400-e29b-41d4-a716-446655440004",
+    categoryId: "550e8400-e29b-41d4-a716-446655440002",
+    amount: -50.23,
+    type: "Expense",
+    date: "2023-01-05",
+    description: "Weekly groceries at store A",
+    createdAt: "2023-01-05T10:30:00Z",
+    isRecurring: false
+  })
+  transaction2: transaction_insert(data: {
+    id: "550e8400-e29b-41d4-a716-446655440006",
+    userId: "550e8400-e29b-41d4-a716-446655440000",
+    accountId: "550e8400-e29b-41d4-a716-446655440004",
+    categoryId: "550e8400-e29b-41d4-a716-446655440003",
+    amount: 2500.00,
+    type: "Income",
+    date: "2023-01-01",
+    description: "Monthly salary",
+    createdAt: "2023-01-01T09:00:00Z",
+    isRecurring: true
+  })
+  budget1: budget_insert(data: {
+    id: "550e8400-e29b-41d4-a716-446655440007",
+    userId: "550e8400-e29b-41d4-a716-446655440000",
+    categoryId: "550e8400-e29b-41d4-a716-446655440002",
+    period: "Monthly",
+    limitAmount: 200.00,
+    startDate: "2023-01-01",
+    createdAt: "2023-01-01T15:00:00Z",
+    endDate: "2023-01-31"
+  })
+  financialGoal1: financialGoal_insert(data: {
+    id: "550e8400-e29b-41d4-a716-446655440008",
+    userId: "550e8400-e29b-41d4-a716-446655440000",
+    name: "New Car Downpayment",
+    targetAmount: 5000.00,
+    targetDate: "2024-12-31",
+    currentAmount: 1200.50,
+    createdAt: "2023-02-10T11:00:00Z",
+    description: "Saving for a new car"
+  })
+}

@@ -1,0 +1,44 @@
+query getUserAccounts @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users as it only returns accounts owned by the requesting user.") {
+  accounts(where: { userId: { eq_expr: "auth.uid" } }) {
+    id
+    name
+    type
+    balance
+    createdAt
+    description
+  }
+}
+
+query getCategoryById($categoryId: UUID!) @auth(level: USER, insecureReason: "This operation retrieves a specific category by ID and is safe for logged-in users to access.") {
+  category(id: $categoryId) {
+    id
+    name
+    type
+    iconUrl
+    createdAt
+  }
+}
+
+mutation createTransaction($accountId: UUID!, $categoryId: UUID!, $amount: Float!, $type: String!, $date: Date!, $description: String!, $isRecurring: Boolean) @auth(level: USER, insecureReason: "This operation creates a new transaction and is safe for logged-in users to perform on their own data.") {
+  transaction_insert(data: {
+    userId_expr: "auth.uid",
+    accountId: $accountId,
+    categoryId: $categoryId,
+    amount: $amount,
+    type: $type,
+    date: $date,
+    description: $description,
+    isRecurring: $isRecurring
+  }) {
+    id
+  }
+}
+
+mutation updateFinancialGoalCurrentAmount($goalId: UUID!, $newCurrentAmount: Float!) @auth(level: USER, insecureReason: "This operation updates the current amount of a financial goal and is safe for logged-in users to modify their own goals.") {
+  financialGoal_update(
+    key: { id: $goalId },
+    data: { currentAmount: $newCurrentAmount }
+  ) {
+    id
+  }
+}

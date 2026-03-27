@@ -1,0 +1,56 @@
+type User @table {
+  email: String!
+  passwordHash: String!
+  createdAt: Timestamp!
+  displayName: String
+  currencyPreference: String
+}
+
+type Account @table {
+  user: User!
+  name: String!
+  type: String!
+  balance: Float!
+  createdAt: Timestamp!
+  description: String
+}
+
+type Category @table {
+  user: User!
+  name: String!
+  type: String!
+  createdAt: Timestamp!
+  iconUrl: String
+}
+
+type Transaction @table {
+  user: User!
+  account: Account!
+  category: Category!
+  amount: Float!
+  type: String!
+  date: Date!
+  description: String!
+  createdAt: Timestamp!
+  isRecurring: Boolean
+}
+
+type Budget @table {
+  user: User!
+  category: Category!
+  period: String!
+  limitAmount: Float!
+  startDate: Date!
+  createdAt: Timestamp!
+  endDate: Date
+}
+
+type FinancialGoal @table {
+  user: User!
+  name: String!
+  targetAmount: Float!
+  targetDate: Date!
+  currentAmount: Float!
+  createdAt: Timestamp!
+  description: String
+}
