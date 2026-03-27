@@ -448,7 +448,7 @@ const FIREBASE_CONFIG = {
 
 /* ─── Default admin credentials (pehle login ke liye) ─── */
 const DEFAULT_ADMIN_USER = "admin";
-const DEFAULT_ADMIN_PASS = "Admin@123";
+const DEFAULT_ADMIN_PASS = "admin";
 
 /* ═══════════════════════════════════════════════
    STATE
@@ -519,10 +519,14 @@ async function loadServices() {
   try {
     const snap = await db.collection("services").orderBy("order").get();
     if (!snap.empty) { services = snap.docs.map(d => ({ id: d.id, ...d.data() })); return; }
-  } catch(e) {}
-  // Seed default services if Firestore is empty
+  } catch(e) { console.log("Firestore read failed:", e); }
+  // Try localStorage fallback
+  const local = localStorage.getItem("fintax_admin_services");
+  if (local) { try { services = JSON.parse(local); if (services.length) return; } catch(e){} }
+  // Use defaults
   services = getDefaultServices();
-  await seedDefaultServices();
+  saveServicesToLocal();
+  try { await seedDefaultServices(); } catch(e) { console.log("Firestore seed failed, using local:", e); }
 }
 
 async function seedDefaultServices() {
@@ -613,7 +617,13 @@ function updateSvcField(id, field, value) {
   if (field === "clientPrice" || field === "ourPrice") renderServicesTable();
 }
 
+function saveServicesToLocal() {
+  localStorage.setItem("fintax_admin_services", JSON.stringify(services));
+}
+
 async function saveAllServices() {
+  // Always save to localStorage first (backup)
+  saveServicesToLocal();
   try {
     const batch = db.batch();
     services.forEach((s, i) => {
@@ -621,9 +631,11 @@ async function saveAllServices() {
       batch.set(ref, { ...s, order: i });
     });
     await batch.commit();
-    showToast("✅ Saari services save ho gayi!");
-    renderStats();
-  } catch(e) { showToast("❌ Save failed: " + e.message, true); }
+    showToast("✅ Saari services save ho gayi! (Firebase + Local dono mein)");
+  } catch(e) {
+    showToast("⚠️ Firebase save failed — locally save ho gayi hai. Firebase rules fix karein.", true);
+  }
+  renderStats();
 }
 
 function toggleAddPanel() {
@@ -650,14 +662,15 @@ async function addService() {
     partnerIds:  document.getElementById("ns-partners").value.split(",").map(p=>p.trim()).filter(Boolean),
     order:       services.length
   };
+  services.push(newSvc);
+  saveServicesToLocal();
+  renderServicesTable(); renderStats();
+  toggleAddPanel();
+  ["ns-name","ns-cat","ns-icon","ns-our","ns-client","ns-time","ns-docs","ns-note","ns-partners"].forEach(id => document.getElementById(id).value = "");
   try {
     await db.collection("services").doc(newId).set(newSvc);
-    services.push(newSvc);
-    renderServicesTable(); renderStats();
-    toggleAddPanel();
-    ["ns-name","ns-cat","ns-icon","ns-our","ns-client","ns-time","ns-docs","ns-note","ns-partners"].forEach(id => document.getElementById(id).value = "");
-    showToast("✅ Nayi service add ho gayi!");
-  } catch(e) { showToast("❌ Error: " + e.message, true); }
+    showToast("✅ Nayi service add ho gayi! (Firebase + Local)");
+  } catch(e) { showToast("⚠️ Service locally add ho gayi. Firebase save ke liye rules fix karein.", true); }
 }
 
 /* ─── Docs Modal ─── */
@@ -691,13 +704,14 @@ function confirmDelete(id, name) {
 function closeConfirmModal() { document.getElementById("confirmModal").classList.remove("open"); }
 
 async function deleteService(id) {
+  services = services.filter(s => s.id !== id);
+  saveServicesToLocal();
+  renderServicesTable(); renderStats();
+  closeConfirmModal();
   try {
     await db.collection("services").doc(id).delete();
-    services = services.filter(s => s.id !== id);
-    renderServicesTable(); renderStats();
-    closeConfirmModal();
-    showToast("🗑️ Service delete ho gayi.");
-  } catch(e) { showToast("❌ Delete failed: " + e.message, true); }
+    showToast("🗑️ Service delete ho gayi!");
+  } catch(e) { showToast("⚠️ Locally delete ho gayi. Firebase se bhi hatane ke liye rules fix karein.", true); }
 }
 
 /* ═══════════════════════════════════════════════
