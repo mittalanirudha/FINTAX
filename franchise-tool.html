@@ -495,7 +495,7 @@ function renderHome(){
   document.getElementById("featGrid").innerHTML=services.slice(0,6).map(s=>`<div class="feat-card" onclick="openDetail('${s.id}')"><div class="feat-icon">${s.icon||"📋"}</div><div class="feat-name">${s.name}</div><div class="feat-price">₹${(s.clientPrice||0).toLocaleString("en-IN")}</div></div>`).join("");
 }
 
-function getCatIcon(c){const m={"Income Tax":"📊","GST":"🏷️","Trademark & IP":"™️","Company":"🏢","Society & Trust":"🏛️","Registrations":"🔖"};return m[c]||"📋";}
+function getCatIcon(c){const m={"Income Tax":"📊","GST":"🏷️","Trademark & IP":"™️","Company Registration":"🏢","NGO & Trust":"🏛️","Licenses & Registrations":"🔖","Accounting & Audit":"📚","Digital & Financial":"💳"};return m[c]||"📋";}
 
 function jumpCat(c){activeCat=c;showScreen("services");renderCatRow();renderSvcList();}
 
